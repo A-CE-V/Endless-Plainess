@@ -92,7 +92,7 @@ app.post(
   "/uncompact",
   verifyApiKey,
   (req, res, next) => enforceLimit(req, res, next, "code"),
-  (req, res) => {
+  async (req, res) => {
     try {
       const { text } = req.body;
 
@@ -100,9 +100,11 @@ app.post(
         return res.status(400).json({ error: "Missing required 'text' field" });
       }
 
+      const language = await getBestLanguageString(text);
       const uncompactedText = uncompactCode(text);
 
       res.json({
+        language: language || "unknown",
         originalLength: text.length,
         formattedLength: uncompactedText.length,
         formattedText: uncompactedText,
@@ -113,6 +115,7 @@ app.post(
     }
   }
 );
+
 
 // /format
 app.post(
