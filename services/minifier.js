@@ -86,6 +86,5 @@ function uncompactCode(code) {
   return indentedCode.trim();
 }
 
-// ... (all functions) ...
 
 export { compactCode, uncompactCode };

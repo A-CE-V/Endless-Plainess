@@ -16,7 +16,6 @@ app.use(cors());
 // PROTECTED ROUTES (API KEY + CODE LIMIT)
 // ============================================
 
-// /detect
 app.post(
   "/detect",
   verifyApiKey,
@@ -87,9 +86,7 @@ app.post(
   }
 );
 
-// /uncompact
-app.post(
-  "/uncompact",
+app.post("/uncompact",
   verifyApiKey,
   (req, res, next) => enforceLimit(req, res, next, "code"),
   async (req, res) => {
@@ -101,13 +98,13 @@ app.post(
       }
 
       const language = await getBestLanguageString(text);
-      const uncompactedText = uncompactCode(text);
+      const formatted = await formatCode(text, language);
 
       res.json({
         language: language || "unknown",
         originalLength: text.length,
-        formattedLength: uncompactedText.length,
-        formattedText: uncompactedText,
+        formattedLength: formatted.length,
+        formattedText: formatted,
       });
     } catch (err) {
       console.error("Uncompaction error:", err);
@@ -115,6 +112,7 @@ app.post(
     }
   }
 );
+
 
 
 // /format
