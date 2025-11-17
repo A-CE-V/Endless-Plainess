@@ -98,13 +98,14 @@ app.post("/uncompact",
       }
 
       const language = await getBestLanguageString(text);
-      const formatted = await formatCode(text, language);
+      const uncompactedText = uncompactCode(text);
+      const formattedText = await formatCode(uncompactedText, language);
 
       res.json({
         language: language || "unknown",
         originalLength: text.length,
-        formattedLength: formatted.length,
-        formattedText: formatted,
+        formattedLength: formattedText.length,
+        formattedText: formattedText,
       });
     } catch (err) {
       console.error("Uncompaction error:", err);
@@ -112,6 +113,7 @@ app.post("/uncompact",
     }
   }
 );
+
 
 
 

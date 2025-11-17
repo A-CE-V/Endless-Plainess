@@ -52,39 +52,78 @@ async function compactCode(code, language) {
 function uncompactCode(code) {
   let indentLevel = 0;
   let indentedCode = "";
+  let i = 0;
+  const n = code.length;
+  let currentLine = "";
+  let inString = false;
+  let stringChar = '';
+  let inTemplate = false;
+  let escapeNext = false;
 
+  while (i < n) {
+    const char = code[i];
 
-  let formatted = code
-    .replace(/;/g, ';\n') // Add newline after semicolon
-    .replace(/\{/g, ' {\n') // Add space and newline before opening brace
-    .replace(/\}/g, '}\n') // Add newline after closing brace
-    .replace(/\)\{/g, ') {\n') // Handle function/condition block start
-    .replace(/([a-zA-Z0-9])\{/g, '$1 {\n') // Handle identifiers before opening brace
-    .replace(/\n\s*\n/g, '\n'); // Collapse multiple newlines
-
-
-  formatted.split('\n').forEach(line => {
-    line = line.trim();
-    if (!line) return; 
-
-    const openingBraceCount = (line.match(/\{/g) || []).length;
-    const closingBraceCount = (line.match(/\}/g) || []).length;
-    
-    if (line.startsWith('}') || line.startsWith(']')) {
-      indentLevel = Math.max(0, indentLevel - 1);
+    // Handle escaping in strings
+    if (escapeNext) {
+      currentLine += char;
+      escapeNext = false;
+      i++;
+      continue;
     }
 
-    const indentation = '    '.repeat(indentLevel);
+    if (inString) {
+      currentLine += char;
+      if (char === '\\') {
+        escapeNext = true;
+      } else if (char === stringChar) {
+        inString = false;
+        stringChar = '';
+      } else if (char === '`') {
+        inTemplate = !inTemplate;
+      }
+      i++;
+      continue;
+    } else if (char === '"' || char === "'" || char === '`') {
+      inString = true;
+      stringChar = char;
+      currentLine += char;
+      i++;
+      continue;
+    }
 
-    indentedCode += indentation + line + '\n';
-    
-    if (openingBraceCount > closingBraceCount) {
+    // Handle braces
+    if (char === '{' || char === '[') {
+      if (currentLine.trim()) {
+        indentedCode += '    '.repeat(indentLevel) + currentLine.trim() + '\n';
+      }
+      indentedCode += '    '.repeat(indentLevel) + char + '\n';
       indentLevel++;
+      currentLine = '';
+    } else if (char === '}' || char === ']') {
+      if (currentLine.trim()) {
+        indentedCode += '    '.repeat(indentLevel) + currentLine.trim() + '\n';
+      }
+      indentLevel = Math.max(0, indentLevel - 1);
+      indentedCode += '    '.repeat(indentLevel) + char + '\n';
+      currentLine = '';
+    } else if (char === ';') {
+      currentLine += char;
+      indentedCode += '    '.repeat(indentLevel) + currentLine.trim() + '\n';
+      currentLine = '';
+    } else {
+      currentLine += char;
     }
-  });
+
+    i++;
+  }
+
+  if (currentLine.trim()) {
+    indentedCode += '    '.repeat(indentLevel) + currentLine.trim() + '\n';
+  }
 
   return indentedCode.trim();
 }
+
 
 
 export { compactCode, uncompactCode };
