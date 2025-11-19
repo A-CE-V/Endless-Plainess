@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 
-import { verifyApiKey } from "./shared/apiKeyMiddleware.js";
+import { verifyApiKey, verifyInternalKey } from "./shared/apiKeyMiddleware.js";
 import { enforceLimit } from "./shared/rateLimit.js";
 
 import { compactCode, uncompactCode } from "./services/minifier.js";
@@ -18,7 +18,7 @@ app.use(cors());
 
 app.post(
   "/detect",
-  verifyApiKey,
+  verifyInternalKey,
   (req, res, next) => enforceLimit(req, res, next, "code"),
   async (req, res) => {
     try {
@@ -57,7 +57,6 @@ app.post(
   }
 );
 
-// /compact
 app.post(
   "/compact",
   verifyApiKey,
@@ -115,9 +114,6 @@ app.post("/uncompact",
 );
 
 
-
-
-// /format
 app.post(
   "/format",
   verifyApiKey,
@@ -152,12 +148,10 @@ app.post(
   }
 );
 
-// Health
 app.get("/health", (req, res) => {
   res.json({ status: "OK", uptime: process.uptime() });
 });
 
-// Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () =>
   console.log(`Code Toolbox API running on port ${PORT}`)
