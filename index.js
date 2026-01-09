@@ -1,18 +1,64 @@
 import express from "express";
 import cors from "cors";
 
-// Assuming verifyApiKey and verifyInternalKey are defined in this path
-import { verifyApiKey, verifyInternalKey } from "./shared/apiKeyMiddleware.js"; 
-// Removed import for enforceLimit since it's now handled by the Gateway
-// import { enforceLimit } from "./shared/rateLimit.js"; 
 
 import { compactCode, uncompactCode } from "./services/minifier.js";
 import { detectCodeLanguage, getBestLanguageString } from "./services/language_detector.js";
 import { formatCode } from "./services/formatter.js";
 
+
+/**
+ * Commit V.3.0.0 - 2026-01-09
+ * 
+ * ------------------------------
+ *  CodeTools Microservice
+ * ------------------------------
+ * Features:
+ *  - Detect, compress, decompress & format code. All in just one api.
+ *  - Secured with HMAC authentication middleware [Added on this commit]
+ * 
+ * 
+ */
+import { verifyInternalKey } from "./shared/apiKeyMiddleware.js";
+import { Readable } from 'stream';
+
 const app = express();
-app.use(express.json({ limit: "1mb" }));
+
+app.use((req, res, next) => {
+  let data = [];
+  req.on('data', chunk => data.push(chunk));
+  req.on('end', () => {
+    const buffer = Buffer.concat(data);
+    req.rawBody = buffer;
+
+    if (req.headers['content-length'] > 0 || req.headers['transfer-encoding']) {
+      const readable = new Readable();
+      readable._read = () => {}; 
+      readable.push(buffer);
+      readable.push(null);
+      
+      Object.assign(readable, {
+        headers: req.headers,
+        method: req.method,
+        url: req.url,
+        rawBody: buffer
+      });
+      
+      req.on = readable.on.bind(readable);
+      req.once = readable.once.bind(readable);
+      req.emit = readable.emit.bind(readable);
+      req.resume = readable.resume.bind(readable);
+      req.pause = readable.pause.bind(readable);
+      req.pipe = readable.pipe.bind(readable);
+      req.unpipe = readable.unpipe.bind(readable);
+    }
+    next();
+  });
+});
+
 app.use(cors());
+app.use(express.json({ limit: "5mb" }));
+
 
 // ============================================
 // PROTECTED ROUTES (VERIFIED BY GATEWAY'S INTERNAL KEY)
