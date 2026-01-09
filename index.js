@@ -31,6 +31,7 @@ app.use((req, res, next) => {
     const buffer = Buffer.concat(data);
     req.rawBody = buffer;
 
+    // 1. Re-inject stream for other middlewares (Multer/express.json)
     if (req.headers['content-length'] > 0 || req.headers['transfer-encoding']) {
       const readable = new Readable();
       readable._read = () => {}; 
@@ -51,6 +52,15 @@ app.use((req, res, next) => {
       req.pause = readable.pause.bind(readable);
       req.pipe = readable.pipe.bind(readable);
       req.unpipe = readable.unpipe.bind(readable);
+
+      // 2. MAGIC FIX: If it's JSON, parse it now so req.body is ready for the signature check
+      if (req.headers['content-type']?.includes('application/json')) {
+        try {
+          req.body = JSON.parse(buffer.toString());
+        } catch (e) {
+          req.body = {};
+        }
+      }
     }
     next();
   });
